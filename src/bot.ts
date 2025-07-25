@@ -15,7 +15,9 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to send typing action: ${response.json()}`);
+			throw new Error(
+				`Failed to send typing action: ${(await response.json()).description}`
+			);
 		}
 	}
 
@@ -30,7 +32,9 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to send message: ${response.json()}`);
+			throw new Error(
+				`Failed to send message: ${(await response.json()).description}`
+			);
 		}
 	}
 
@@ -54,7 +58,11 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to send message with keyboard: ${response.json()}`);
+			throw new Error(
+				`Failed to send message with keyboard: ${JSON.stringify(
+					await response.json()
+				)}`
+			);
 		}
 	}
 
@@ -68,7 +76,9 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to send photo: ${response.json()}`);
+			throw new Error(
+				`Failed to send photo: ${(await response.json()).description}`
+			);
 		}
 	}
 
@@ -82,7 +92,9 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to send document: ${response.json()}`);
+			throw new Error(
+				`Failed to send document: ${(await response.json()).description}`
+			);
 		}
 	}
 
@@ -96,7 +108,9 @@ export default class TelegramBot {
 		const response = await fetch(url + param.toString());
 
 		if (!response.ok) {
-			console.error(`Failed to delete message: ${response.json()}`);
+			throw new Error(
+				`Failed to delete message: ${(await response.json()).description}`
+			);
 		}
 	}
 }
