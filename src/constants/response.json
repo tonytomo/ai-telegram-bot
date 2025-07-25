@@ -1,0 +1,14 @@
+{
+	"/hello": {
+		"output": "Hello %name%, how can I assist you today?",
+		"description": "A simple greeting response."
+	},
+	"/help": {
+		"output": "Here are some commands you can use: /hello, /info, /exit.",
+		"description": "Provides a list of available commands."
+	},
+	"/info": {
+		"output": "This bot can help you with various tasks. Type /help to see what I can do.",
+		"description": "Gives information about the bot's capabilities."
+	}
+}

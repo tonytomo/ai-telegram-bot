@@ -1,0 +1,23 @@
+{
+	"name": "ai-gen",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "node esbuild.config.mjs"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"devDependencies": {
+		"@types/aws-lambda": "^8.10.152",
+		"@types/node": "^24.1.0",
+		"esbuild": "^0.25.8",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.1"
+	}
+}

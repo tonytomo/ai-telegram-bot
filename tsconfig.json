@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2022", // Or a recent ES version like es2020, es2021, esnext
+    "module": "esnext", // Or es2020, es2022, commonjs (if using a bundler to convert to ESM)
+    "moduleResolution": "node", // Essential for Node.js projects
+    "outDir": "./dist",
+    "rootDir": "./src", // Assuming your source code is in 'src'
+    "esModuleInterop": true, // Recommended for working with CommonJS modules
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true, // Allows importing JSON files
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
