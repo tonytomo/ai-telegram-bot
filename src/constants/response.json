@@ -1,4 +1,12 @@
 {
+	"auto:welcome": {
+		"output": "Hi %name%! Welcome to the group! Type /help to see what I can do.",
+		"description": "A welcome message for new users."
+	},
+	"auto:goodbye": {
+		"output": "Goodbye %name%! Hope to see you again soon!",
+		"description": "A farewell message for users leaving the group."
+	},
 	"/hello": {
 		"output": "Hello %name%, how can I assist you today?",
 		"description": "A simple greeting response."

@@ -1,48 +1,70 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import response from "./constants/response.json" assert { type: "json" };
 import { replaceResponse } from "./utils";
-import { Bot } from "./bot";
+import { IMessage } from "./types/message";
+import response from "./constants/response.json" assert { type: "json" };
+import TelegramBot from "./bot";
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	console.log("Event Context:", context);
 	console.log("Event Body:", JSON.parse(event.body || "{}"));
 
+	let output: string | undefined;
+
+	const bot = new TelegramBot(process.env.SECRET_TOKEN || "");
+
 	if (!event.body) {
 		return {
 			statusCode: 400,
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ error: "No body provided in the request" }),
+			body: JSON.stringify({ error: "Request body is missing" }),
 		};
 	}
 
 	const body = JSON.parse(event.body);
-	const messageText = body.message?.text;
-	const senderName = body.message?.from?.first_name;
-	const reply = response[messageText as keyof typeof response]?.output;
-	const output = replaceResponse(reply, "name", senderName);
+	const message: IMessage = body.message;
+
+	const newChatMembers = message.new_chat_members || [];
+	if (newChatMembers.length > 0) {
+		const reply = response["auto:welcome"]?.output;
+		output = replaceResponse(reply, "name", newChatMembers[0].first_name);
+
+		await bot.typing(message.from.id);
+		await bot.send(message.from.id, output);
+
+		return {
+			statusCode: 200,
+			body: JSON.stringify({ message: "Welcome message sent successfully" }),
+		};
+	}
+
+	if (message.left_chat_member) {
+		const reply = response["auto:goodbye"]?.output;
+		output = replaceResponse(
+			reply,
+			"name",
+			message.left_chat_member.first_name
+		);
+
+		await bot.typing(message.from.id);
+		await bot.send(message.from.id, output);
+
+		return {
+			statusCode: 200,
+			body: JSON.stringify({ message: "Goodbye message sent successfully" }),
+		};
+	}
+
+	const reply = response[message.text as keyof typeof response]?.output;
+	output = replaceResponse(reply, "name", message.from.first_name);
 
 	if (!output) {
-		return {
-			ok: false,
-			error: "No matching guide found",
-		};
+		output = message.text;
 	}
 
-	const bot = new Bot(process.env.SECRET_TOKEN || "");
-
-	try {
-		await bot.send(body.message.chat.id, output);
-	} catch (error) {
-		return {
-			ok: false,
-			error: `Failed to send message: ${
-				error instanceof Error ? error.message : "Unknown error"
-			}`,
-		};
-	}
+	await bot.typing(message.chat.id);
+	await bot.send(message.chat.id, output);
 
 	return {
-		ok: true,
-		data: { message: output },
+		statusCode: 200,
+		body: JSON.stringify({ message: "Message sent successfully" }),
 	};
 };

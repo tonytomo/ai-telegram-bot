@@ -36,6 +36,7 @@ async function runTest() {
 			MemoryLimitInMB: "128",
 		};
 
+		console.clear();
 		console.log("\x1b[1m\x1b[32m--- Invoking Lambda Handler ---\x1b[0m");
 		const result = await handler(event, context);
 		console.log("\x1b[1m\x1b[34m--- Lambda Handler Result ---\x1b[0m");
