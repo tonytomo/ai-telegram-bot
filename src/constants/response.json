@@ -1,22 +1,26 @@
 {
 	"auto:welcome": {
-		"output": "Hi %name%, *Welcome to the group\\!* Type /help to see what I can do\\.",
+		"output": "Hi %name%, *Welcome to the group!* Type /help to see what I can do.",
 		"description": "A welcome message for new users."
 	},
 	"auto:goodbye": {
-		"output": "Goodbye %name%, *Hope to see you again soon\\!*",
+		"output": "Goodbye %name%, *Hope to see you again soon!*",
 		"description": "A farewell message for users leaving the group."
+	},
+	"auto:ai": {
+		"output": "Saya %name%, saya ingin tanya dong.",
+		"description": "A message to prompt the ai for a question or input."
 	},
 	"/hello": {
 		"output": "Hello %name%, *how can I assist you today?*",
 		"description": "A simple greeting response."
 	},
 	"/help": {
-		"output": "Here are some *commands* you can use: /hello, /info, /exit\\.",
+		"output": "Here are some *commands* you can use: /hello, /info, /exit.",
 		"description": "Provides a list of available commands."
 	},
 	"/info": {
-		"output": "I can help you with *various tasks*\\. Type /help to see what I can do\\.",
+		"output": "I can help you with *various tasks*. Type /help to see what I can do.",
 		"description": "Gives information about the bot's capabilities."
 	}
 }

@@ -1,8 +1,9 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { replaceResponse } from "./utils";
+import { formatMessage, replaceResponse } from "./utils";
 import { IMessage } from "./types/message";
 import response from "./constants/response.json" assert { type: "json" };
 import TelegramBot from "./bot";
+import { getAIResponse } from "./ai";
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	console.log("Event Context:", context);
@@ -57,11 +58,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	output = replaceResponse(reply, "name", message.from.first_name);
 
 	if (!output) {
-		output = message.text;
+		let prompt = response["auto:ai"].output + ` ${message.text}`;
+		prompt = replaceResponse(prompt, "name", message.from.first_name);
+		output = await getAIResponse(prompt);
 	}
 
 	await bot.typing(message.chat.id);
-	await bot.send(message.chat.id, output);
+	await bot.send(message.chat.id, formatMessage(output));
 
 	return {
 		statusCode: 200,
