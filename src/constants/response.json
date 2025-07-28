@@ -11,6 +11,10 @@
 		"output": "Saya %name%, saya ingin tanya dong.",
 		"description": "A message to prompt the ai for a question or input."
 	},
+	"auto:fail": {
+		"output": "Maaf %name%, saya tidak mengerti. Bisa tolong ulangi?",
+		"description": "A fallback message when the bot does not understand the input."
+	},
 	"/hello": {
 		"output": "Hello %name%, *how can I assist you today?*",
 		"description": "A simple greeting response."

@@ -57,10 +57,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	const reply = response[message.text as keyof typeof response]?.output;
 	output = replaceResponse(reply, "name", message.from.first_name);
 
-	if (!output) {
+	if (!output && message.chat.type === "private") {
 		let prompt = response["auto:ai"].output + ` ${message.text}`;
 		prompt = replaceResponse(prompt, "name", message.from.first_name);
 		output = await getAIResponse(prompt);
+	}
+
+	if (!output) {
+		output = response["auto:fail"].output;
 	}
 
 	await bot.typing(message.chat.id);
