@@ -15,7 +15,6 @@ build/
 # AWS Lambda artifacts
 .aws-sam/
 .lambda/
-src/lambda/
 
 # IDE files
 .vscode/
