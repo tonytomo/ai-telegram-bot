@@ -1,0 +1,3 @@
+{
+	"body": "{\"callback_query\":{\"id\":\"234567890123456789\",\"data\":\"hi\",\"message\":{\"from\":{\"id\":987654321,\"is_bot\":true,\"first_name\":\"YourBot\",\"username\":\"YourBotUsername\"}}}}"
+}

@@ -10,6 +10,7 @@ export function replaceResponse(
 }
 
 export function formatMessage(str: string) {
+	console.log("\x1b[1m\x1b[34mFormatting message:\x1b[0m");
 	console.log("Original message:", str);
 
 	const specialChars = ["~", "#", "+", "-", "=", "(", ")", "{", "}", ".", "!"];

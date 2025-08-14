@@ -1,114 +1,263 @@
+import { TKeyboards } from "./types/keyboard";
+import { IInit, IMessage } from "./types/message";
+import { formatMessage } from "./utils";
+
 export default class TelegramBot {
-	token: string;
+	init: IInit;
+	isRan: boolean = false;
 
-	constructor(token: string) {
-		this.token = token;
+	constructor(init: IInit) {
+		this.init = init;
 	}
 
-	async typing(chatId: number): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			action: "typing",
-		});
+	async on(text: string, run: (msg: IMessage) => Promise<void>): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+			if (this.init.message.text !== text) return;
 
-		const url = `https://api.telegram.org/bot${this.token}/sendChatAction?`;
-		const response = await fetch(url + param.toString());
-
-		if (!response.ok) {
-			throw new Error(
-				`Failed to send typing action: ${(await response.json()).description}`
-			);
+			console.log(`Listening for message: ${text}`);
+			await run(this.init.message);
+			this.isRan = true;
+		} catch (error) {
+			console.error(`Error handling event "${text}":`, error);
 		}
 	}
 
-	async send(chatId: number, text: string): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			text: text,
-			parse_mode: "MarkdownV2",
-		});
+	async onQuery(query: string, keyboard: TKeyboards): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.message) return;
+			if (!this.init.query) throw new Error("Query is not set");
+			if (this.init.query.data !== query) return;
 
-		const url = `https://api.telegram.org/bot${this.token}/sendMessage?`;
-		const response = await fetch(url + param.toString());
-
-		if (!response.ok) {
-			throw new Error(
-				`Failed to send message: ${(await response.json()).description}`
-			);
+			console.log(`Listening for query: ${query}`);
+			await this.editKey(keyboard);
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in onQuery method:", error);
 		}
 	}
 
-	async sendWithKeyboard(
-		chatId: number,
-		text: string,
-		keyboard: Array<Array<{ text: string; url: string }>>
-	): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			text: text,
-			parse_mode: "MarkdownV2",
-			reply_markup: JSON.stringify({
-				inline_keyboard: keyboard,
-			}),
-		});
+	async onWelcome(): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
 
-		const url = `https://api.telegram.org/bot${this.token}/sendMessage?`;
-		const response = await fetch(url + param.toString());
+			const adds = this.init.message.new_chat_members || [];
+			if (adds.length === 0) return;
 
-		if (!response.ok) {
-			throw new Error(
-				`Failed to send message with keyboard: ${JSON.stringify(
-					await response.json()
-				)}`
-			);
+			adds.forEach((user) => {
+				this.typing();
+				this.send(`Welcome ${user.first_name}!`);
+			});
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in welcome method:", error);
 		}
 	}
 
-	async sendPhoto(chatId: number, photoUrl: string): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			photo: photoUrl,
-		});
+	async onGoodbye(): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
 
-		const url = `https://api.telegram.org/bot${this.token}/sendPhoto?`;
-		const response = await fetch(url + param.toString());
+			const left = this.init.message.left_chat_member;
+			if (!left) return;
 
-		if (!response.ok) {
-			throw new Error(
-				`Failed to send photo: ${(await response.json()).description}`
-			);
+			this.typing();
+			this.send(`Goodbye ${left.first_name}!`);
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in goodbye method:", error);
 		}
 	}
 
-	async sendDocument(chatId: number, documentUrl: string): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			document: documentUrl,
-		});
+	async typing(): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
 
-		const url = `https://api.telegram.org/bot${this.token}/sendDocument?`;
-		const response = await fetch(url + param.toString());
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				action: "typing",
+			});
 
-		if (!response.ok) {
-			throw new Error(
-				`Failed to send document: ${(await response.json()).description}`
-			);
+			const url = `https://api.telegram.org/bot${this.init.token}/sendChatAction?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to send typing action: ${(await response.json()).description}`
+				);
+			}
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in typing method:", error);
 		}
 	}
 
-	async deleteMessage(chatId: number, messageId: number): Promise<void> {
-		const param = new URLSearchParams({
-			chat_id: chatId.toString(),
-			message_id: messageId.toString(),
-		});
+	async send(text: string): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
 
-		const url = `https://api.telegram.org/bot${this.token}/deleteMessage?`;
-		const response = await fetch(url + param.toString());
+			const formattedText = formatMessage(text);
 
-		if (!response.ok) {
-			throw new Error(
-				`Failed to delete message: ${(await response.json()).description}`
-			);
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				text: formattedText,
+				parse_mode: "MarkdownV2",
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/sendMessage?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to send message: ${(await response.json()).description}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in send method:", error);
+		}
+	}
+
+	async sendKey(keyboard: TKeyboards, text?: string): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				text: text || "Pilih pilihan di bawah ini:",
+				parse_mode: "MarkdownV2",
+				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/sendMessage?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to send message with keyboard: ${JSON.stringify(
+						await response.json()
+					)}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in sendKey method:", error);
+		}
+	}
+
+	async editKey(keyboard: TKeyboards): Promise<void> {
+		try {
+			if (!this.init.query) throw new Error("Query is not set");
+			if (!this.init.query.inline_message_id)
+				throw new Error("Inline is not set");
+			if (!this.init.query.data) throw new Error("Query data is not set");
+
+			const param = new URLSearchParams({
+				inline_message_id: this.init.query.inline_message_id,
+				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/editMessageReplyMarkup?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to edit message with keyboard: ${
+						(await response.json()).description
+					}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in editKey method:", error);
+		}
+	}
+
+	async sendPic(photoUrl: string): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				photo: photoUrl,
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/sendPhoto?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to send photo: ${(await response.json()).description}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in sendPic method:", error);
+		}
+	}
+
+	async sendDoc(documentUrl: string): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				document: documentUrl,
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/sendDocument?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to send document: ${(await response.json()).description}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in sendDoc method:", error);
+		}
+	}
+
+	async remove(): Promise<void> {
+		try {
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const param = new URLSearchParams({
+				chat_id: this.init.message.chat.id.toString(),
+				message_id: this.init.message.message_id.toString(),
+			});
+
+			const url = `https://api.telegram.org/bot${this.init.token}/deleteMessage?`;
+			const response = await fetch(url + param.toString());
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to delete message: ${(await response.json()).description}`
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in remove method:", error);
 		}
 	}
 }

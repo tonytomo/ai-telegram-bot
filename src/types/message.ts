@@ -1,4 +1,18 @@
+export interface IInit {
+	token: string;
+	message?: IMessage;
+	query?: ICallbackQuery;
+}
+
+export interface ICallbackQuery {
+	id: string;
+	from: IUser;
+	inline_message_id?: string;
+	data?: string;
+}
+
 export interface IMessage {
+	message_id: number;
 	text: string;
 	from: IUser;
 	date: number;
