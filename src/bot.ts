@@ -41,16 +41,14 @@ export default class TelegramBot {
 	async sendWithKeyboard(
 		chatId: number,
 		text: string,
-		keyboard: Array<Array<{ text: string }>>
+		keyboard: Array<Array<{ text: string; url: string }>>
 	): Promise<void> {
 		const param = new URLSearchParams({
 			chat_id: chatId.toString(),
 			text: text,
 			parse_mode: "MarkdownV2",
 			reply_markup: JSON.stringify({
-				keyboard: keyboard,
-				one_time_keyboard: true,
-				resize_keyboard: true,
+				inline_keyboard: keyboard,
 			}),
 		});
 

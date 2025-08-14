@@ -11,7 +11,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
 	let output: string | undefined;
 
-	const bot = new TelegramBot(process.env.SECRET_TOKEN || "");
+	const bot = new TelegramBot(process.env.TELEGRAM_API_TOKEN || "");
 
 	if (!event.body) {
 		return {
@@ -51,6 +51,29 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		return {
 			statusCode: 200,
 			body: JSON.stringify({ message: "Goodbye message sent successfully" }),
+		};
+	}
+
+	if (message.text === "/keyboard") {
+		const keyboard = [
+			[
+				{ text: "Google", url: "https://www.google.com" },
+				{ text: "GitHub", url: "https://github.com" },
+			],
+			[
+				{ text: "OpenAI", url: "https://www.openai.com" },
+				{ text: "Telegram", url: "https://telegram.org" },
+			],
+		];
+		await bot.typing(message.chat.id);
+		await bot.sendWithKeyboard(
+			message.chat.id,
+			"Here are some links:",
+			keyboard
+		);
+		return {
+			statusCode: 200,
+			body: JSON.stringify({ message: "Keyboard sent successfully" }),
 		};
 	}
 
