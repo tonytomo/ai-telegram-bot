@@ -160,12 +160,12 @@ export default class TelegramBot {
 	async editKey(keyboard: TKeyboards): Promise<void> {
 		try {
 			if (!this.init.query) throw new Error("Query is not set");
-			if (!this.init.query.inline_message_id)
-				throw new Error("Inline is not set");
+			if (!this.init.query.message) throw new Error("Message is not set");
 			if (!this.init.query.data) throw new Error("Query data is not set");
 
 			const param = new URLSearchParams({
-				inline_message_id: this.init.query.inline_message_id,
+				chat_id: this.init.query.message.chat.id.toString(),
+				message_id: this.init.query.message.message_id.toString(),
 				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
 			});
 

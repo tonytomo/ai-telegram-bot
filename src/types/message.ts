@@ -6,8 +6,7 @@ export interface IInit {
 
 export interface ICallbackQuery {
 	id: string;
-	from: IUser;
-	inline_message_id?: string;
+	message?: IMessage;
 	data?: string;
 }
 
