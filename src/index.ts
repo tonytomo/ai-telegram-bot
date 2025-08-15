@@ -2,25 +2,15 @@ import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { ICallbackQuery, IMessage } from "./types/message";
 import TelegramBot from "./bot";
 import { TKeyboards } from "./types/keyboard";
+import { response } from "./utils";
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	console.log("Event Context:", context);
 	console.log("Event Body:", JSON.parse(event.body || "{}"));
 
 	const token = process.env.TELEGRAM_API_TOKEN;
-	if (!token) {
-		return {
-			statusCode: 500,
-			body: JSON.stringify({ error: "Telegram API token is not set" }),
-		};
-	}
-
-	if (!event.body) {
-		return {
-			statusCode: 400,
-			body: JSON.stringify({ error: "Request body is missing" }),
-		};
-	}
+	if (!token) return response(500, { error: "Token is not set" });
+	if (!event.body) return response(400, { error: "Body is required" });
 
 	const body = JSON.parse(event.body);
 	const message: IMessage = body.message;
@@ -42,12 +32,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		],
 	]);
 
-	await bot.on("/halo", async (msg) => {
+	await bot.on("/halo", async () => {
 		await bot.typing();
 		await bot.send("Halo, apa kabar?");
 	});
 
-	await bot.on("/start", async (msg) => {
+	await bot.on("/start", async () => {
 		const keyboard = [
 			[
 				{ text: "Hi", callback_data: "hi" },
@@ -63,70 +53,5 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		await bot.sendKey(keyboard);
 	});
 
-	// const newChatMembers = message.new_chat_members || [];
-	// if (newChatMembers.length > 0) {
-	// 	const reply = response["auto:welcome"]?.output;
-	// 	output = replaceResponse(reply, "name", newChatMembers[0].first_name);
-
-	// 	await bot.typing();
-	// 	await bot.send(output);
-
-	// 	return {
-	// 		statusCode: 200,
-	// 		body: JSON.stringify({ message: "Welcome message sent successfully" }),
-	// 	};
-	// }
-
-	// if (message.left_chat_member) {
-	// 	const reply = response["auto:goodbye"]?.output;
-	// 	output = replaceResponse(
-	// 		reply,
-	// 		"name",
-	// 		message.left_chat_member.first_name
-	// 	);
-
-	// 	await bot.typing();
-	// 	await bot.send(output);
-
-	// 	return {
-	// 		statusCode: 200,
-	// 		body: JSON.stringify({ message: "Goodbye message sent successfully" }),
-	// 	};
-	// }
-
-	// if (message.text === "/keyboard") {
-	// 	const keyboard = [
-	// 		[{ text: "Google" }, { text: "GitHub" }],
-	// 		[{ text: "OpenAI" }, { text: "Telegram" }],
-	// 	];
-
-	// 	await bot.typing();
-	// 	await bot.sendKey(keyboard);
-
-	// 	return {
-	// 		statusCode: 200,
-	// 		body: JSON.stringify({ message: "Keyboard sent successfully" }),
-	// 	};
-	// }
-
-	// const reply = response[message.text as keyof typeof response]?.output;
-	// output = replaceResponse(reply, "name", message.from.first_name);
-
-	// if (!output && message.chat.type === "private") {
-	// 	let prompt = response["auto:ai"].output + ` ${message.text}`;
-	// 	prompt = replaceResponse(prompt, "name", message.from.first_name);
-	// 	output = await getAIResponse(prompt);
-	// }
-
-	// if (!output) {
-	// 	output = response["auto:fail"].output;
-	// }
-
-	// await bot.typing();
-	// await bot.send(formatMessage(output));
-
-	return {
-		statusCode: 200,
-		body: JSON.stringify({ message: "Message sent successfully" }),
-	};
+	return response(200, { message: "Telegram bot is running" });
 };

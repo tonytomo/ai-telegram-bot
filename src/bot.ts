@@ -1,7 +1,21 @@
 import { TKeyboards } from "./types/keyboard";
 import { IInit, IMessage } from "./types/message";
-import { formatMessage } from "./utils";
+import { formatText } from "./utils";
 
+/**
+ * TelegramBot class provides methods to interact with the Telegram Bot API.
+ * This class is designed to be used in a serverless environment, such as AWS Lambda.
+ * @class TelegramBot
+ * @constructor
+ * @param {IInit} init - Initialization parameters for the bot.
+ * * The `init` object should contain the following properties:
+ * * - `token`: The Telegram Bot API token.
+ * * - `message`: An optional message object if the bot is responding to a message.
+ * * - `query`: An optional callback query object if the bot is responding to a callback query.
+ * @example
+ * const bot = new TelegramBot({ token, message, query });
+ * await bot.onWelcome();
+ */
 export default class TelegramBot {
 	init: IInit;
 	isRan: boolean = false;
@@ -10,7 +24,14 @@ export default class TelegramBot {
 		this.init = init;
 	}
 
-	async on(text: string, run: (msg: IMessage) => Promise<void>): Promise<void> {
+	/**
+	 * Handles a specific text message event.
+	 * This method listens for a specific text message and executes the provided function when the text matches.
+	 * @param text The text to listen for.
+	 * @param run The function to execute when the text matches.
+	 * @returns A promise that resolves when the event is handled.
+	 */
+	async on(text: string, run: () => Promise<void>): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.query) return;
@@ -18,13 +39,20 @@ export default class TelegramBot {
 			if (this.init.message.text !== text) return;
 
 			console.log(`Listening for message: ${text}`);
-			await run(this.init.message);
+			await run();
 			this.isRan = true;
 		} catch (error) {
 			console.error(`Error handling event "${text}":`, error);
 		}
 	}
 
+	/**
+	 * Handles a specific callback query event sent by the user from an inline keyboard.
+	 * This method listens for a specific callback query and executes the provided function when the query matches.
+	 * @param query The callback query data to listen for.
+	 * @param run The function to execute when the query matches.
+	 * @returns A promise that resolves when the event is handled.
+	 */
 	async onQuery(query: string, keyboard: TKeyboards): Promise<void> {
 		try {
 			if (this.isRan) return;
@@ -40,18 +68,24 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Handles the welcome message when a new user joins the group.
+	 * This method sends a welcome message to new users who join the group.
+	 * @returns A promise that resolves when the welcome message is sent.
+	 */
 	async onWelcome(): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.query) return;
 			if (!this.init.message) throw new Error("Message is not set");
 
+			const id = this.init.message.from.id.toString();
 			const adds = this.init.message.new_chat_members || [];
 			if (adds.length === 0) return;
 
 			adds.forEach((user) => {
 				this.typing();
-				this.send(`Welcome ${user.first_name}!`);
+				this.send(`Welcome ${user.first_name}!`, id);
 			});
 			this.isRan = true;
 		} catch (error) {
@@ -59,23 +93,34 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Handles the goodbye message when a user leaves the group.
+	 * This method sends a goodbye message to users who leave the group.
+	 * @returns A promise that resolves when the goodbye message is sent.
+	 */
 	async onGoodbye(): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.query) return;
 			if (!this.init.message) throw new Error("Message is not set");
 
+			const id = this.init.message.from.id.toString();
 			const left = this.init.message.left_chat_member;
 			if (!left) return;
 
 			this.typing();
-			this.send(`Goodbye ${left.first_name}!`);
+			this.send(`Goodbye ${left.first_name}!`, id);
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in goodbye method:", error);
 		}
 	}
 
+	/**
+	 * Sends a typing action to the chat.
+	 * This method simulates the bot typing in the chat.
+	 * @returns A promise that resolves when the typing action is sent.
+	 */
 	async typing(): Promise<void> {
 		try {
 			if (this.init.query) return;
@@ -100,15 +145,22 @@ export default class TelegramBot {
 		}
 	}
 
-	async send(text: string): Promise<void> {
+	/**
+	 * Sends a text message to the chat.
+	 * This method sends a text message to the specified chat.
+	 * @param text The text message to send.
+	 * @param id The chat ID to send the message to. If not provided, it uses the chat ID from the message.
+	 * @returns A promise that resolves when the message is sent.
+	 */
+	async send(text: string, id: string = ""): Promise<void> {
 		try {
 			if (this.init.query) return;
 			if (!this.init.message) throw new Error("Message is not set");
 
-			const formattedText = formatMessage(text);
+			const formattedText = formatText(text);
 
 			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
+				chat_id: id ? id : this.init.message.chat.id.toString(),
 				text: formattedText,
 				parse_mode: "MarkdownV2",
 			});
@@ -128,6 +180,13 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Sends a message with an inline keyboard.
+	 * This method sends a message with an inline keyboard to the chat.
+	 * @param keyboard The inline keyboard to send.
+	 * @param text Optional text to include with the keyboard.
+	 * @returns A promise that resolves when the message with the keyboard is sent.
+	 */
 	async sendKey(keyboard: TKeyboards, text?: string): Promise<void> {
 		try {
 			if (this.init.query) return;
@@ -157,6 +216,12 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Edits the inline keyboard of an existing message.
+	 * This method updates the inline keyboard of a message based on the provided keyboard layout.
+	 * @param keyboard The new inline keyboard to set for the message.
+	 * @returns A promise that resolves when the keyboard is edited.
+	 */
 	async editKey(keyboard: TKeyboards): Promise<void> {
 		try {
 			if (!this.init.query) throw new Error("Query is not set");
@@ -186,6 +251,12 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Sends a photo to the chat.
+	 * This method sends a photo to the specified chat.
+	 * @param photoUrl The URL of the photo to send.
+	 * @returns A promise that resolves when the photo is sent.
+	 */
 	async sendPic(photoUrl: string): Promise<void> {
 		try {
 			if (this.init.query) return;
@@ -211,6 +282,12 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Sends a document to the chat.
+	 * This method sends a document to the specified chat.
+	 * @param documentUrl The URL of the document to send.
+	 * @returns A promise that resolves when the document is sent.
+	 */
 	async sendDoc(documentUrl: string): Promise<void> {
 		try {
 			if (this.init.query) return;
@@ -236,6 +313,11 @@ export default class TelegramBot {
 		}
 	}
 
+	/**
+	 * Removes a message from the chat.
+	 * This method deletes a message from the chat based on the message ID.
+	 * @returns A promise that resolves when the message is removed.
+	 */
 	async remove(): Promise<void> {
 		try {
 			if (this.init.query) return;
