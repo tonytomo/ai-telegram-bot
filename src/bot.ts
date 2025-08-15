@@ -1,6 +1,6 @@
 import { TKeyboards } from "./types/keyboard";
-import { IInit, IMessage } from "./types/message";
-import { formatText } from "./utils";
+import { IInit } from "./types/message";
+import { checkSwears, formatText } from "./utils";
 
 /**
  * TelegramBot class provides methods to interact with the Telegram Bot API.
@@ -22,6 +22,30 @@ export default class TelegramBot {
 
 	constructor(init: IInit) {
 		this.init = init;
+	}
+
+	/**
+	 * Handles swear words detection in messages.
+	 * This method checks the message text for swear words and responds if any are found.
+	 * @returns A promise that resolves when the swear word check is complete.
+	 */
+	async filter(): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const text = this.init.message.text;
+			const id = this.init.message.from.id.toString();
+			if (checkSwears(text)) {
+				await this.remove();
+				await this.typing();
+				await this.send("Tolong jaga bahasanya, ya!", id);
+				this.isRan = true;
+			}
+		} catch (error) {
+			console.error("Error in onSwear method:", error);
+		}
 	}
 
 	/**
@@ -85,7 +109,7 @@ export default class TelegramBot {
 
 			adds.forEach((user) => {
 				this.typing();
-				this.send(`Welcome ${user.first_name}!`, id);
+				this.send(`Selamat datang ${user.first_name}!`, id);
 			});
 			this.isRan = true;
 		} catch (error) {
@@ -109,13 +133,19 @@ export default class TelegramBot {
 			if (!left) return;
 
 			this.typing();
-			this.send(`Goodbye ${left.first_name}!`, id);
+			this.send(`Sampai jumpa ${left.first_name}!`, id);
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in goodbye method:", error);
 		}
 	}
 
+	/**
+	 * Handles AI-related functionality.
+	 * This method is a placeholder for AI-related features and can be extended in the future.
+	 * @param onlyPrivate If true, the method will only respond to private messages.
+	 * @returns A promise that resolves when the AI functionality is executed.
+	 */
 	async onAi(onlyPrivate: boolean = false): Promise<void> {
 		try {
 			if (this.isRan) return;
@@ -123,10 +153,13 @@ export default class TelegramBot {
 			if (!this.init.message) throw new Error("Message is not set");
 
 			const id = this.init.message.chat.id.toString();
+			const text = this.init.message.text;
+
+			if (text.length < 5) return;
 			if (onlyPrivate && this.init.message.chat.type !== "private") return;
 
 			await this.typing();
-			await this.send("AI is not implemented yet", id);
+			await this.send("Maaf, fitur AI belum tersedia saat ini.", id);
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in AI method:", error);
@@ -153,7 +186,7 @@ export default class TelegramBot {
 
 			if (!response.ok) {
 				throw new Error(
-					`Failed to send typing action: ${(await response.json()).description}`
+					`Failed to show typing: ${(await response.json()).description}`
 				);
 			}
 			this.isRan = true;

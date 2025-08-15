@@ -19,6 +19,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
 	await bot.onWelcome();
 	await bot.onGoodbye();
+	await bot.filter();
 
 	await bot.onKey("hi", keys.love);
 
