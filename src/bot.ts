@@ -157,6 +157,7 @@ export default class TelegramBot {
 			if (this.init.query) return;
 			if (!this.init.message) throw new Error("Message is not set");
 
+			await this.typing();
 			const formattedText = formatText(text);
 
 			const param = new URLSearchParams({
