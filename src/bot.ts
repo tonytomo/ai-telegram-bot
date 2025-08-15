@@ -53,7 +53,7 @@ export default class TelegramBot {
 	 * @param run The function to execute when the query matches.
 	 * @returns A promise that resolves when the event is handled.
 	 */
-	async onQuery(query: string, keyboard: TKeyboards): Promise<void> {
+	async onKey(query: string, keyboard: TKeyboards): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.message) return;
