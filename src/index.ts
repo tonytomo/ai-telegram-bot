@@ -26,7 +26,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	await bot.on("/halo", async () => await bot.send("Halo, apa kabar?"));
 	await bot.on("/start", async () => await bot.sendKey(keys.intro));
 
-	await bot.onAi();
+	await bot.onAi(true);
 
 	return response(200, { message: "Telegram bot is running" });
 };

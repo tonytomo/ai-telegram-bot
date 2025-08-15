@@ -1,3 +1,4 @@
+import { runAi } from "./ai";
 import { TKeyboards } from "./types/keyboard";
 import { IInit } from "./types/message";
 import { checkSwears, formatText } from "./utils";
@@ -39,7 +40,6 @@ export default class TelegramBot {
 			const id = this.init.message.from.id.toString();
 			if (checkSwears(text)) {
 				await this.remove();
-				await this.typing();
 				await this.send("Tolong jaga bahasanya, ya!", id);
 				this.isRan = true;
 			}
@@ -108,7 +108,6 @@ export default class TelegramBot {
 			if (adds.length === 0) return;
 
 			adds.forEach((user) => {
-				this.typing();
 				this.send(`Selamat datang ${user.first_name}!`, id);
 			});
 			this.isRan = true;
@@ -132,7 +131,6 @@ export default class TelegramBot {
 			const left = this.init.message.left_chat_member;
 			if (!left) return;
 
-			this.typing();
 			this.send(`Sampai jumpa ${left.first_name}!`, id);
 			this.isRan = true;
 		} catch (error) {
@@ -154,12 +152,14 @@ export default class TelegramBot {
 
 			const id = this.init.message.chat.id.toString();
 			const text = this.init.message.text;
+			const name = this.init.message.from.first_name;
 
 			if (text.length < 5) return;
 			if (onlyPrivate && this.init.message.chat.type !== "private") return;
 
-			await this.typing();
-			await this.send("Maaf, fitur AI belum tersedia saat ini.", id);
+			console.log(`Listening to prompt: ${text}`);
+			const answer = await runAi(text, name);
+			await this.send(answer, id);
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in AI method:", error);

@@ -1,22 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
-import aiConfig from "./constants/ai.json" assert { type: "json" };
+import aiConfig from "./constants/ai.json";
 
-const ai = new GoogleGenAI({});
+export async function runAi(text: string, name: string): Promise<string> {
+	const ai = new GoogleGenAI({});
 
-export async function getAIResponse(message: string) {
+	const contents = `User name: ${name}\nUser prompt: ${text}`;
+
 	const response = await ai.models.generateContent({
-		model: aiConfig.model,
-		contents: message,
-		config: {
-			maxOutputTokens: aiConfig.max_tokens,
-			temperature: aiConfig.temperature,
-			topP: aiConfig.top_p,
-			systemInstruction: aiConfig.system_instruction,
-		},
+		...aiConfig,
+		contents,
 	});
 
-	console.log("Asking AI:", message);
-	console.log("AI Response:", response.text);
+	console.log("Prompt:", text);
+	console.log("Generated:", response.text);
 
-	return response.text || "Sorry, I didn't understand that.";
+	return response.text || "";
 }
