@@ -116,6 +116,23 @@ export default class TelegramBot {
 		}
 	}
 
+	async onAi(onlyPrivate: boolean = false): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const id = this.init.message.chat.id.toString();
+			if (onlyPrivate && this.init.message.chat.type !== "private") return;
+
+			await this.typing();
+			await this.send("AI is not implemented yet", id);
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in AI method:", error);
+		}
+	}
+
 	/**
 	 * Sends a typing action to the chat.
 	 * This method simulates the bot typing in the chat.
