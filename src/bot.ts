@@ -108,6 +108,7 @@ export default class TelegramBot {
 			if (adds.length === 0) return;
 
 			adds.forEach((user) => {
+				if (user.is_bot) return;
 				this.send(`Selamat datang ${user.first_name}!`, id);
 			});
 			this.isRan = true;
@@ -131,6 +132,7 @@ export default class TelegramBot {
 			const left = this.init.message.left_chat_member;
 			if (!left) return;
 
+			if (left.is_bot) return;
 			this.send(`Sampai jumpa ${left.first_name}!`, id);
 			this.isRan = true;
 		} catch (error) {
