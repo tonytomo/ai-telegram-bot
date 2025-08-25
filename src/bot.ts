@@ -1,7 +1,7 @@
 import { runAi } from "./ai";
 import { getItemByAttribute, insertItem, updateItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
-import { EMemberPlan, ERegisterStatus, IMember } from "./types/member";
+import { EMemberPlan, EStatus, IMember } from "./types/member";
 import { IInit } from "./types/message";
 import { checkSwears, formatText } from "./utils";
 
@@ -88,6 +88,28 @@ export default class TelegramBot {
 
 			console.log(`Listening for query: ${query}`);
 			await this.editKey(keyboard);
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in onQuery method:", error);
+		}
+	}
+
+	/**
+	 * Handles a specific callback query event sent by the user from an inline keyboard.
+	 * This method listens for a specific callback query and executes the provided function when the query matches.
+	 * @param query The callback query data to listen for.
+	 * @param run The function to execute when the query matches.
+	 * @returns A promise that resolves when the event is handled.
+	 */
+	async onKeyRun(query: string, run: () => Promise<void>): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.message) return;
+			if (!this.init.query) throw new Error("Query is not set");
+			if (this.init.query.data !== query) return;
+
+			console.log(`Listening for query: ${query}`);
+			await run();
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in onQuery method:", error);
@@ -190,49 +212,55 @@ export default class TelegramBot {
 				Number(id)
 			)) as IMember[];
 			if (members.length === 0) return;
+			const member = members[0];
 
-			const status = members[0].status;
-			if (status === ERegisterStatus.START) {
-				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-				if (!emailRegex.test(text)) {
-					await this.send(
-						"Format email tidak valid. Silahkan coba lagi.\n\nContoh:contoh@mail.com"
-					);
-				} else {
-					const id = { id: members[0].id };
-					const expression = "SET #status = :status, #email = :email";
-					const names = {
-						"#status": "status",
-						"#email": "email",
-					};
-					const values = {
-						":status": ERegisterStatus.EMAIL,
-						":email": text,
-					};
-					await updateItem("member", id, expression, names, values);
-					await this.send(
-						"Terima kasih! Sekarang, silahkan tulis nomor telepon kamu."
-					);
-				}
-			} else if (status === ERegisterStatus.EMAIL) {
-				const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-				if (!phoneRegex.test(text)) {
-					await this.send(
-						"Format nomor telepon tidak valid. Silahkan coba lagi.\n\nContoh:+6281234567890"
-					);
-				} else {
-					const id = { id: members[0].id };
-					const expression = "SET #status = :status, #phone = :phone";
-					const names = {
-						"#status": "status",
-						"#phone": "phone_number",
-					};
-					const values = {
-						":status": ERegisterStatus.COMPLETED,
-						":phone": text,
-					};
-					await updateItem("member", id, expression, names, values);
-					await this.send("Terima kasih! Pendaftaran kamu sudah lengkap.");
+			if (member.on_progress === "register") {
+				const status = member.status;
+				if (status === EStatus.EMAIL) {
+					const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+					if (!emailRegex.test(text)) {
+						await this.send(
+							"Format email tidak valid. Silahkan coba lagi.\n\nContoh:contoh@mail.com"
+						);
+					} else {
+						const id = { id: member.id };
+						const expression = "SET #status = :status, #email = :email";
+						const names = {
+							"#status": "status",
+							"#email": "email",
+						};
+						const values = {
+							":status": EStatus.PHONE,
+							":email": text,
+						};
+						await updateItem("member", id, expression, names, values);
+						await this.send(
+							"Terima kasih! Sekarang, silahkan tulis nomor telepon kamu."
+						);
+					}
+				} else if (status === EStatus.PHONE) {
+					const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+					if (!phoneRegex.test(text)) {
+						await this.send(
+							"Format nomor telepon tidak valid. Silahkan coba lagi.\n\nContoh:+6281234567890"
+						);
+					} else {
+						const id = { id: member.id };
+						const expression =
+							"SET #status = :status, #phone = :phone, #progress = :progress";
+						const names = {
+							"#status": "status",
+							"#phone": "phone_number",
+							"#progress": "on_progress",
+						};
+						const values = {
+							":status": EStatus.COMPLETED,
+							":phone": text,
+							":progress": "",
+						};
+						await updateItem("member", id, expression, names, values);
+						await this.send("Terima kasih! Pendaftaran kamu sudah lengkap.");
+					}
 				}
 			}
 
@@ -492,7 +520,8 @@ export default class TelegramBot {
 				last_name: member.last_name || "",
 				phone_number: "",
 				email: "",
-				status: ERegisterStatus.START,
+				status: EStatus.EMAIL,
+				on_progress: "register",
 				plan: EMemberPlan.FREE,
 				joined_at: Math.floor(Date.now() / 1000),
 				is_active: true,
