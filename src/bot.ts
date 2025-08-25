@@ -1,7 +1,7 @@
 import { runAi } from "./ai";
-import { getItemByAttribute, insertItem } from "./db";
+import { getItemByAttribute, insertItem, updateItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
-import { EMemberPlan, ERegisterState, IMember } from "./types/member";
+import { EMemberPlan, ERegisterStatus, IMember } from "./types/member";
 import { IInit } from "./types/message";
 import { checkSwears, formatText } from "./utils";
 
@@ -167,6 +167,78 @@ export default class TelegramBot {
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in AI method:", error);
+		}
+	}
+
+	/**
+	 * Handles form submission and processing.
+	 * This method is a placeholder for form-related features and can be extended in the future.
+	 * @returns A promise that resolves when the form functionality is executed.
+	 */
+	async onForm(): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const id = this.init.message.from.id.toString();
+			const text = this.init.message.text;
+
+			const members = (await getItemByAttribute(
+				"member",
+				"id",
+				Number(id)
+			)) as IMember[];
+			if (members.length === 0) return;
+
+			const status = members[0].status;
+			if (status === ERegisterStatus.START) {
+				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+				if (!emailRegex.test(text)) {
+					await this.send(
+						"Format email tidak valid. Silahkan coba lagi.\n\nContoh:contoh@mail.com"
+					);
+				} else {
+					const id = { id: members[0].id };
+					const expression = "SET #status = :status, #email = :email";
+					const names = {
+						"#status": "status",
+						"#email": "email",
+					};
+					const values = {
+						":status": ERegisterStatus.EMAIL,
+						":email": text,
+					};
+					await updateItem("member", id, expression, names, values);
+					await this.send(
+						"Terima kasih! Sekarang, silahkan tulis nomor telepon kamu."
+					);
+				}
+			} else if (status === ERegisterStatus.EMAIL) {
+				const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+				if (!phoneRegex.test(text)) {
+					await this.send(
+						"Format nomor telepon tidak valid. Silahkan coba lagi.\n\nContoh:+6281234567890"
+					);
+				} else {
+					const id = { id: members[0].id };
+					const expression = "SET #status = :status, #phone = :phone";
+					const names = {
+						"#status": "status",
+						"#phone": "phone_number",
+					};
+					const values = {
+						":status": ERegisterStatus.COMPLETED,
+						":phone": text,
+					};
+					await updateItem("member", id, expression, names, values);
+					await this.send("Terima kasih! Pendaftaran kamu sudah lengkap.");
+				}
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error("Error in onForm method:", error);
 		}
 	}
 
@@ -420,7 +492,7 @@ export default class TelegramBot {
 				last_name: member.last_name || "",
 				phone_number: "",
 				email: "",
-				state: ERegisterState.START,
+				status: ERegisterStatus.START,
 				plan: EMemberPlan.FREE,
 				joined_at: Math.floor(Date.now() / 1000),
 				is_active: true,

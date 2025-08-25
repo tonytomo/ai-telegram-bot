@@ -62,7 +62,8 @@ export async function getItemByIndex(
 export async function getItemByAttribute(
 	tableName: string,
 	attributeName: string,
-	attributeValue: any
+	attributeValue: any,
+	limit = 1
 ): Promise<any[]> {
 	try {
 		const data = await db.send(
@@ -71,6 +72,7 @@ export async function getItemByAttribute(
 				FilterExpression: "#attr = :value",
 				ExpressionAttributeNames: { "#attr": attributeName },
 				ExpressionAttributeValues: { ":value": attributeValue },
+				Limit: limit,
 			})
 		);
 		return data.Items || [];
@@ -97,6 +99,7 @@ export async function updateItem(
 	tableName: string,
 	key: Record<string, any>,
 	updateExpression: string,
+	expressionAttributeNames: Record<string, string>,
 	expressionAttributeValues: Record<string, any>
 ): Promise<boolean> {
 	try {
@@ -105,6 +108,7 @@ export async function updateItem(
 				TableName: tableName,
 				Key: key,
 				UpdateExpression: updateExpression,
+				ExpressionAttributeNames: expressionAttributeNames,
 				ExpressionAttributeValues: expressionAttributeValues,
 			})
 		);

@@ -5,7 +5,7 @@ export interface IMember {
 	last_name: string;
 	phone_number: string;
 	email: string;
-	state: TMemberState;
+	status: TMemberStatus;
 	plan: EMemberPlan;
 	joined_at: number;
 	is_active: boolean;
@@ -17,17 +17,17 @@ export enum EMemberPlan {
 	ENTERPRISE = "enterprise",
 }
 
-export type TMemberState = ERegisterState | EQuizState;
+export type TMemberStatus = ERegisterStatus | EQuizStatus;
 
-export enum ERegisterState {
+export enum ERegisterStatus {
 	START = "register_starting",
-	ASK_EMAIL = "ask_email",
-	ASK_PHONE = "ask_phone",
+	EMAIL = "email_filled",
+	PHONE = "phone_filled",
 	COMPLETED = "completed",
 	CANCELLED = "cancelled",
 }
 
-export enum EQuizState {
+export enum EQuizStatus {
 	START = "quiz_starting",
 	ASK_QUESTION = "ask_question",
 	COMPLETED = "completed",
