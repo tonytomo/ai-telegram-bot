@@ -15,10 +15,12 @@
 		"@types/aws-lambda": "^8.10.152",
 		"@types/node": "^24.1.0",
 		"esbuild": "^0.25.8",
-		"typescript": "^5.8.3"
+		"typescript": "^5.8.3",
+		"@aws-sdk/client-dynamodb": "^3.873.0",
+		"@aws-sdk/lib-dynamodb": "^3.873.0",
+		"@google/genai": "^1.11.0"
 	},
 	"dependencies": {
-		"@google/genai": "^1.11.0",
 		"dotenv": "^17.2.1"
 	}
 }

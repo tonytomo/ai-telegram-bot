@@ -1,5 +1,7 @@
 import { runAi } from "./ai";
+import { getItemByAttribute, insertItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
+import { EMemberPlan, ERegisterState, IMember } from "./types/member";
 import { IInit } from "./types/message";
 import { checkSwears, formatText } from "./utils";
 
@@ -393,6 +395,46 @@ export default class TelegramBot {
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in remove method:", error);
+		}
+	}
+
+	/**
+	 * Registers a user in the database.
+	 * This method adds a new user to the database if they are not already registered.
+	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
+	 */
+	async registerMember(): Promise<any | null> {
+		try {
+			if (this.init.query) return null;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const member = this.init.message.from;
+			const joinedMember = await getItemByAttribute("member", "id", member.id);
+
+			if (joinedMember.length > 0) return null;
+
+			const newUser: IMember = {
+				id: member.id,
+				username: member.username || "",
+				first_name: member.first_name || "",
+				last_name: member.last_name || "",
+				phone_number: "",
+				email: "",
+				state: ERegisterState.START,
+				plan: EMemberPlan.FREE,
+				joined_at: Math.floor(Date.now() / 1000),
+				is_active: true,
+			};
+
+			const success = await insertItem("member", newUser);
+			if (success) {
+				return newUser;
+			} else {
+				return null;
+			}
+		} catch (error) {
+			console.error("Error when registering member:", error);
+			return null;
 		}
 	}
 }
