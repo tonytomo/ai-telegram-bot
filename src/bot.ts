@@ -87,6 +87,7 @@ export default class TelegramBot {
 			if (this.init.query.data !== query) return;
 
 			console.log(`Listening for query: ${query}`);
+			console.log("Editing keyboard...");
 			await this.editKey(keyboard);
 			this.isRan = true;
 		} catch (error) {
@@ -109,6 +110,7 @@ export default class TelegramBot {
 			if (this.init.query.data !== query) return;
 
 			console.log(`Listening for query: ${query}`);
+			console.log("Executing associated function...");
 			await run();
 			this.isRan = true;
 		} catch (error) {
@@ -308,14 +310,25 @@ export default class TelegramBot {
 	 */
 	async send(text: string, id: string = ""): Promise<void> {
 		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
+			const query = this.init.query;
+			const message = this.init.message;
+
+			let fromId = "";
+			if (id) {
+				fromId = id;
+			} else if (query) {
+				fromId = query.from.id.toString();
+			} else if (message) {
+				fromId = message.from.id.toString();
+			}
+
+			console.log("Preparing to send message:", text);
 
 			await this.typing();
 			const formattedText = formatText(text);
 
 			const param = new URLSearchParams({
-				chat_id: id ? id : this.init.message.chat.id.toString(),
+				chat_id: fromId,
 				text: formattedText,
 				parse_mode: "MarkdownV2",
 			});
