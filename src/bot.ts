@@ -2,8 +2,8 @@ import { runAi } from "./ai";
 import { getItem, insertItem, updateItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
 import { IMember } from "./types/member";
-import { IInit } from "./types/message";
-import { checkSwears, formatText, newMember } from "./utils";
+import { IInit, IUser } from "./types/message";
+import { checkSwears, formatText, getNewMember } from "./utils";
 
 /**
  * TelegramBot class provides methods to interact with the Telegram Bot API.
@@ -21,10 +21,35 @@ import { checkSwears, formatText, newMember } from "./utils";
  */
 export default class TelegramBot {
 	init: IInit;
-	isRan: boolean = false;
+	isRan: boolean;
+	isKey: boolean;
+	isText: boolean;
+	isPrivate: boolean;
+	news: IUser[] | undefined;
+	left: IUser | undefined;
+	text: string | undefined;
+	data: string | undefined;
+	member: IMember | null;
+	user: IUser | undefined;
 
 	constructor(init: IInit) {
 		this.init = init;
+		this.isRan = false;
+		this.isKey = init.query ? true : false;
+		this.isText = init.message ? true : false;
+		this.isPrivate = init.message
+			? init.message.chat.type === "private"
+			: false;
+		this.news = init.message ? init.message.new_chat_members : undefined;
+		this.left = init.message ? init.message.left_chat_member : undefined;
+		this.text = init.message ? init.message.text : undefined;
+		this.data = init.query ? init.query.data : undefined;
+		this.member = init.member;
+		this.user = init.message
+			? init.message.from
+			: init.query
+			? init.query.from
+			: undefined;
 	}
 
 	/**
@@ -34,18 +59,52 @@ export default class TelegramBot {
 	 * @param run The function to execute when the text matches.
 	 * @returns A promise that resolves when the event is handled.
 	 */
-	async on(text: string, run: () => Promise<void>): Promise<void> {
+	async on(text: string, run: () => Promise<void>) {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-			if (this.init.message.text !== text) return;
-
-			console.log(`Listening for message: ${text}`);
+			if (this.isRan || !this.isText) return;
+			console.log(`➡️ on "${text}"`);
 			await run();
 			this.isRan = true;
 		} catch (error) {
-			console.error(`Error handling event "${text}":`, error);
+			console.error(`🟥 ERROR on "${text}":`, error);
+		}
+	}
+
+	/**
+	 * Handles the /start command.
+	 * This method listens for the /start command and sends a welcome message.
+	 * @returns A promise that resolves when the welcome message is sent.
+	 */
+	async onStart(): Promise<void> {
+		try {
+			if (this.isRan || !this.text || !this.user) return;
+			if (!["/start", "/mulai"].includes(this.text)) return;
+			console.log('➡️ on "/start"');
+			const name = this.user.first_name;
+			if (!this.member) {
+				await this.send(
+					`Halo ${name}! Selamat datang, ${name}!\nSebelum memulai, silahkan membaca ketentuan kami di bawah ini:\n[Syarat dan Ketentuan](https://...)\n[Kebijakan Privasi](https://...)`,
+					[[{ text: "Saya sudah membaca", callback_data: "read" }]]
+				);
+			} else {
+				await this.send(
+					`Halo ${name}!\nApa yang ingin kamu lakukan hari ini?`,
+					[
+						[
+							{ text: "Tanya AI", callback_data: "ai" },
+							{ text: "Buka Profil", callback_data: "profile" },
+						],
+						[
+							{ text: "Gabung Kelas", callback_data: "join" },
+							{ text: "Kelasmu", callback_data: "classes" },
+						],
+					]
+				);
+			}
+
+			this.isRan = true;
+		} catch (error) {
+			console.error(`🟥 ERROR on "/start":`, error);
 		}
 	}
 
@@ -56,46 +115,15 @@ export default class TelegramBot {
 	 * @param run The function to execute when the query matches.
 	 * @returns A promise that resolves when the event is handled.
 	 */
-	async onKey(
-		query: string,
-		keyboard: TKeyboards,
-		text: string
-	): Promise<void> {
+	async onKey(query: string, run: () => Promise<void>): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.message) return;
-			if (!this.init.query) throw new Error("Query is not set");
-			if (this.init.query.data !== query) return;
+			if (this.isRan || !this.isKey) return;
 
-			console.log(`Listening for query: ${query}`);
-			console.log("Editing keyboard...");
-			await this.editKey(keyboard, text);
-			this.isRan = true;
-		} catch (error) {
-			console.error("Error in onQuery method:", error);
-		}
-	}
-
-	/**
-	 * Handles a specific callback query event sent by the user from an inline keyboard.
-	 * This method listens for a specific callback query and executes the provided function when the query matches.
-	 * @param query The callback query data to listen for.
-	 * @param run The function to execute when the query matches.
-	 * @returns A promise that resolves when the event is handled.
-	 */
-	async onKeyRun(query: string, run: () => Promise<void>): Promise<void> {
-		try {
-			if (this.isRan) return;
-			if (this.init.message) return;
-			if (!this.init.query) throw new Error("Query is not set");
-			if (this.init.query.data !== query) return;
-
-			console.log(`Listening for query: ${query}`);
-			console.log("Executing associated function...");
+			console.log(`➡️ in onKey "${query}"`);
 			await run();
 			this.isRan = true;
 		} catch (error) {
-			console.error("Error in onQuery method:", error);
+			console.error("🟥 ERROR in onKey:", error);
 		}
 	}
 
@@ -106,21 +134,16 @@ export default class TelegramBot {
 	 */
 	async onWelcome(): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const id = this.init.message.from.id.toString();
-			const adds = this.init.message.new_chat_members || [];
-			if (adds.length === 0) return;
-
-			adds.forEach((user) => {
+			if (this.isRan || !this.news) return;
+			if (this.news.length === 0) return;
+			console.log("➡️ in onWelcome");
+			this.news.forEach(async (user) => {
 				if (user.is_bot) return;
-				this.send(`Selamat datang ${user.first_name}!`, id);
+				// Placeholder for future welcome message
 			});
 			this.isRan = true;
 		} catch (error) {
-			console.error("Error in welcome method:", error);
+			console.error("🟥 ERROR in onWelcome:", error);
 		}
 	}
 
@@ -131,19 +154,13 @@ export default class TelegramBot {
 	 */
 	async onGoodbye(): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const id = this.init.message.from.id.toString();
-			const left = this.init.message.left_chat_member;
-			if (!left) return;
-
-			if (left.is_bot) return;
-			this.send(`Sampai jumpa ${left.first_name}!`, id);
+			if (this.isRan || !this.left) return;
+			console.log("➡️ in onGoodbye");
+			if (this.left.is_bot) return;
+			// Placeholder for future goodbye message
 			this.isRan = true;
 		} catch (error) {
-			console.error("Error in goodbye method:", error);
+			console.error("🟥 ERROR in onGoodbye:", error);
 		}
 	}
 
@@ -153,25 +170,27 @@ export default class TelegramBot {
 	 * @param onlyPrivate If true, the method will only respond to private messages.
 	 * @returns A promise that resolves when the AI functionality is executed.
 	 */
-	async onAi(onlyPrivate: boolean = false): Promise<void> {
+	async onAi(): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
+			if (this.isRan || !this.isText || !this.text || !this.user) return;
+			if (!this.isPrivate || !this.member) return;
+			if (this.member.on_progress !== "ask_ai") return;
+			if (this.member.credits < 1) {
+				return await this.send(
+					"Maaf, kredit kamu tidak mencukupi untuk menggunakan layanan AI. Silahkan top up kredit kamu terlebih dahulu."
+				);
+			}
 
-			const id = this.init.message.chat.id.toString();
-			const text = this.init.message.text;
-			const name = this.init.message.from.first_name;
-
-			if (text.length < 5) return;
-			if (onlyPrivate && this.init.message.chat.type !== "private") return;
-
-			console.log(`Listening to prompt: ${text}`);
-			const answer = await runAi(text, name);
-			await this.send(answer, id);
+			console.log(`➡️ in onAi "${this.text}"`);
+			const answer = await runAi(this.text, this.user.first_name);
+			if (!answer) return;
+			const newCredits = this.member.credits - 1;
+			const key = { id: this.user.id };
+			await updateItem("member", key, { credits: newCredits });
+			await this.send(answer);
 			this.isRan = true;
 		} catch (error) {
-			console.error("Error in AI method:", error);
+			console.error(`🟥 ERROR in onAi:"${this.text}"`, error);
 		}
 	}
 
@@ -182,24 +201,16 @@ export default class TelegramBot {
 	 */
 	async onForm(form: string, run: () => Promise<void>): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const user = this.init.message.from;
-			const text = this.init.message.text;
-
-			const member: IMember = await getItem("member", { id: user.id });
-			if (!member) return;
-			if (member.on_progress !== form) return;
+			if (this.isRan || !this.isText || !this.text || !this.user) return;
+			if (!this.member) return;
+			if (this.member.on_progress !== form) return;
 
 			// Placeholder for form processing logic
-			// e.g., updating member information based on the text input
-			console.log(`Processing form input from ${user.id}: ${text}`);
+			console.log(`➡️ in onForm "${form}"`);
 			await run();
 			this.isRan = true;
 		} catch (error) {
-			console.error("Error in onForm method:", error);
+			console.error("🟥 ERROR in onForm:", error);
 		}
 	}
 
@@ -210,25 +221,22 @@ export default class TelegramBot {
 	 */
 	async typing(): Promise<void> {
 		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
+			if (!this.isText) return;
+			console.log("➡️ in typing");
 
 			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
+				chat_id: this.user ? this.user.id.toString() : "",
 				action: "typing",
 			});
-
 			const url = `https://api.telegram.org/bot${this.init.token}/sendChatAction?`;
 			const response = await fetch(url + param.toString());
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to show typing: ${(await response.json()).description}`
-				);
+				const error = await response.json();
+				throw new Error(`Failed to show typing: ${error.description}`);
 			}
-			this.isRan = true;
 		} catch (error) {
-			console.error("Error in typing method:", error);
+			console.error("🟥 ERROR in typing:", error);
 		}
 	}
 
@@ -239,61 +247,23 @@ export default class TelegramBot {
 	 * @param id The chat ID to send the message to. If not provided, it uses the chat ID from the message.
 	 * @returns A promise that resolves when the message is sent.
 	 */
-	async send(text: string, id: string = ""): Promise<void> {
+	async send(text: string, keyboard: TKeyboards = []): Promise<void> {
 		try {
 			const query = this.init.query;
 			const message = this.init.message;
 
-			let fromId = "";
-			if (id) {
-				fromId = id;
-			} else if (query) {
-				fromId = query.from.id.toString();
-			} else if (message) {
-				fromId = message.from.id.toString();
-			}
-
-			console.log("Preparing to send message:", text);
+			let id: string = "";
+			if (query) id = query.from.id.toString();
+			else if (message) id = message.from.id.toString();
+			else throw new Error("Neither query nor message is set");
 
 			await this.typing();
 			const formattedText = formatText(text);
 
+			console.log("➡️ in send:", { id, text: formattedText, keyboard });
 			const param = new URLSearchParams({
-				chat_id: fromId,
+				chat_id: id,
 				text: formattedText,
-				parse_mode: "MarkdownV2",
-			});
-
-			const url = `https://api.telegram.org/bot${this.init.token}/sendMessage?`;
-			const response = await fetch(url + param.toString());
-
-			if (!response.ok) {
-				throw new Error(
-					`Failed to send message: ${(await response.json()).description}`
-				);
-			}
-
-			this.isRan = true;
-		} catch (error) {
-			console.error("Error in send method:", error);
-		}
-	}
-
-	/**
-	 * Sends a message with an inline keyboard.
-	 * This method sends a message with an inline keyboard to the chat.
-	 * @param keyboard The inline keyboard to send.
-	 * @param text Optional text to include with the keyboard.
-	 * @returns A promise that resolves when the message with the keyboard is sent.
-	 */
-	async sendKey(keyboard: TKeyboards, text?: string): Promise<void> {
-		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
-				text: text || "Pilih pilihan di bawah ini:",
 				parse_mode: "MarkdownV2",
 				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
 			});
@@ -302,16 +272,11 @@ export default class TelegramBot {
 			const response = await fetch(url + param.toString());
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to send message with keyboard: ${JSON.stringify(
-						await response.json()
-					)}`
-				);
+				const error = await response.json();
+				throw new Error(`Failed to send message: ${error.description}`);
 			}
-
-			this.isRan = true;
 		} catch (error) {
-			console.error("Error in sendKey method:", error);
+			console.error("🟥 ERROR in send:", error);
 		}
 	}
 
@@ -321,16 +286,29 @@ export default class TelegramBot {
 	 * @param keyboard The new inline keyboard to set for the message.
 	 * @returns A promise that resolves when the keyboard is edited.
 	 */
-	async editKey(keyboard: TKeyboards, text: string): Promise<void> {
+	async edit(text: string, keyboard: TKeyboards = []): Promise<void> {
 		try {
-			if (!this.init.query) throw new Error("Query is not set");
-			if (!this.init.query.message) throw new Error("Message is not set");
+			const query = this.init.query;
+			const message = this.init.message;
+
+			let id: string = "";
+			let msgId: string = "";
+			if (query) {
+				id = query.from.id.toString();
+				msgId = query.message ? query.message.message_id.toString() : "";
+			} else if (message) {
+				id = message.from.id.toString();
+				msgId = message.message_id.toString();
+			} else {
+				throw new Error("Neither query nor message is set");
+			}
 
 			const formattedText = formatText(text);
 
+			console.log("➡️ in edit:", { id, msgId, text: formattedText, keyboard });
 			const param = new URLSearchParams({
-				chat_id: this.init.query.message.chat.id.toString(),
-				message_id: this.init.query.message.message_id.toString(),
+				chat_id: id,
+				message_id: msgId,
 				text: formattedText,
 				parse_mode: "MarkdownV2",
 				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
@@ -340,78 +318,11 @@ export default class TelegramBot {
 			const response = await fetch(url + param.toString());
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to edit message with keyboard: ${
-						(await response.json()).description
-					}`
-				);
+				const error = await response.json();
+				throw new Error(`Failed to edit message: ${error.description}`);
 			}
-
-			this.isRan = true;
 		} catch (error) {
-			console.error("Error in editKey method:", error);
-		}
-	}
-
-	/**
-	 * Sends a photo to the chat.
-	 * This method sends a photo to the specified chat.
-	 * @param photoUrl The URL of the photo to send.
-	 * @returns A promise that resolves when the photo is sent.
-	 */
-	async sendPic(photoUrl: string): Promise<void> {
-		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
-				photo: photoUrl,
-			});
-
-			const url = `https://api.telegram.org/bot${this.init.token}/sendPhoto?`;
-			const response = await fetch(url + param.toString());
-
-			if (!response.ok) {
-				throw new Error(
-					`Failed to send photo: ${(await response.json()).description}`
-				);
-			}
-
-			this.isRan = true;
-		} catch (error) {
-			console.error("Error in sendPic method:", error);
-		}
-	}
-
-	/**
-	 * Sends a document to the chat.
-	 * This method sends a document to the specified chat.
-	 * @param documentUrl The URL of the document to send.
-	 * @returns A promise that resolves when the document is sent.
-	 */
-	async sendDoc(documentUrl: string): Promise<void> {
-		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
-				document: documentUrl,
-			});
-
-			const url = `https://api.telegram.org/bot${this.init.token}/sendDocument?`;
-			const response = await fetch(url + param.toString());
-
-			if (!response.ok) {
-				throw new Error(
-					`Failed to send document: ${(await response.json()).description}`
-				);
-			}
-
-			this.isRan = true;
-		} catch (error) {
-			console.error("Error in sendDoc method:", error);
+			console.error("🟥 ERROR in edit:", error);
 		}
 	}
 
@@ -422,26 +333,36 @@ export default class TelegramBot {
 	 */
 	async remove(): Promise<void> {
 		try {
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
+			const query = this.init.query;
+			const message = this.init.message;
 
+			let id: string = "";
+			let msgId: string = "";
+			if (query) {
+				id = query.from.id.toString();
+				msgId = query.message ? query.message.message_id.toString() : "";
+			} else if (message) {
+				id = message.from.id.toString();
+				msgId = message.message_id.toString();
+			} else {
+				throw new Error("Neither query nor message is set");
+			}
+
+			console.log("➡️ in remove:", { id, msgId });
 			const param = new URLSearchParams({
-				chat_id: this.init.message.chat.id.toString(),
-				message_id: this.init.message.message_id.toString(),
+				chat_id: id,
+				message_id: msgId,
 			});
 
 			const url = `https://api.telegram.org/bot${this.init.token}/deleteMessage?`;
 			const response = await fetch(url + param.toString());
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to delete message: ${(await response.json()).description}`
-				);
+				const error = await response.json();
+				throw new Error(`Failed to delete message: ${error.description}`);
 			}
-
-			this.isRan = true;
 		} catch (error) {
-			console.error("Error in remove method:", error);
+			console.error("🟥 ERROR in remove:", error);
 		}
 	}
 
@@ -450,31 +371,28 @@ export default class TelegramBot {
 	 * This method adds a new user to the database if they are not already registered.
 	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
 	 */
-	async register(): Promise<any | null> {
+	async register(): Promise<void> {
 		try {
-			if (this.init.query) return null;
-			if (!this.init.message) throw new Error("Message is not set");
+			const query = this.init.query;
+			const message = this.init.message;
 
-			const user = this.init.message.from;
+			let id: number | null = null;
+			let user: IUser | null = null;
+			if (query) {
+				id = query.from.id;
+				user = query.from;
+			} else if (message) {
+				id = message.from.id;
+				user = message.from;
+			} else throw new Error("Neither query nor message is set");
 
-			const joinedMember: IMember = await getItem("member", { id: user.id });
-			if (joinedMember) {
-				await this.send("Kamu sudah terdaftar sebelumnya.");
-				return null;
-			}
+			if (this.member) return;
 
-			const newUser: IMember = newMember(user);
-			const success = await insertItem("member", newUser);
-
-			if (success) {
-				await this.send("Masukan email kamu di sini ya!");
-				return newUser;
-			}
-
-			return null;
+			console.log("➡️ in register:", { id, user });
+			const newMember = getNewMember(user);
+			await insertItem("member", newMember);
 		} catch (error) {
-			console.error("Error when registering member:", error);
-			return null;
+			console.error("🟥 ERROR in register:", error);
 		}
 	}
 
@@ -485,18 +403,13 @@ export default class TelegramBot {
 	 */
 	async filter(): Promise<void> {
 		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
+			if (this.isRan || !this.isText || !this.text) return;
 
-			const text = this.init.message.text;
-			const id = this.init.message.from.id.toString();
-			if (checkSwears(text)) {
-				await this.remove();
-				await this.send("Tolong jaga bahasanya, ya!", id);
-			}
+			const text = this.text;
+			console.log(`➡️ in onSwear "${text}"`);
+			if (checkSwears(text)) await this.remove();
 		} catch (error) {
-			console.error("Error in onSwear method:", error);
+			console.error("🟥 ERROR in onSwear:", error);
 		}
 	}
 
@@ -507,18 +420,23 @@ export default class TelegramBot {
 	 * @param id The ID of the member whose progress status is to be updated.
 	 * @returns A promise that resolves when the progress status is updated.
 	 */
-	async setProgress(progress: string, id: number): Promise<void> {
+	async setProgress(progress: string): Promise<void> {
 		try {
-			const member: IMember = await getItem("member", { id });
-			if (!member) return;
+			let id: number;
+			if (this.init.query) {
+				id = this.init.query.from.id;
+			} else if (this.init.message) {
+				id = this.init.message.from.id;
+			} else {
+				throw new Error("Neither query nor message is set");
+			}
 
-			const key = { id };
-			const update = "SET #progress = :progress";
-			const names = { "#progress": "on_progress" };
-			const values = { ":progress": progress };
-			await updateItem("member", key, update, names, values);
+			if (!this.member) return;
+
+			console.log("➡️ in setProgress:", { id, progress });
+			await updateItem("member", { id }, { on_progress: progress });
 		} catch (error) {
-			console.error("Error when setting progress:", error);
+			console.error("🟥 ERROR in setProgress:", error);
 		}
 	}
 }
