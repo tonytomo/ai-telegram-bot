@@ -2,6 +2,7 @@ import { APIGatewayProxyResultV2 } from "aws-lambda";
 import swearWords from "./constants/swearword.json";
 import { IUser } from "./types/message";
 import { ELevel, IMember } from "./types/member";
+import { getItem } from "./db";
 
 export function replaceText(
 	str: string | undefined,
@@ -59,11 +60,11 @@ export function response(
 	};
 }
 
-export function newMember(member: IUser): IMember {
+export function getNewMember(user: IUser): IMember {
 	return {
-		id: member.id,
-		username: member.username || "",
-		name: `${member.first_name || ""} ${member.last_name || ""}`.trim(),
+		id: user.id,
+		username: user.username || "",
+		name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
 		level: ELevel.IRON,
 		score: 0,
 		credits: 1000,
@@ -71,4 +72,11 @@ export function newMember(member: IUser): IMember {
 		joined_at: Math.floor(Date.now() / 1000),
 		is_active: false,
 	};
+}
+
+export async function isMember(user: IUser | null): Promise<IMember | null> {
+	if (!user) return null;
+	const joinedMember: IMember = await getItem("member", { id: user.id });
+	if (!joinedMember) return null;
+	return joinedMember;
 }

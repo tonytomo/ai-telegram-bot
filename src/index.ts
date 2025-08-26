@@ -1,8 +1,7 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { ICallbackQuery, IMessage } from "./types/message";
 import TelegramBot from "./bot";
-import { response } from "./utils";
-import keys from "./constants/keyboard.json";
+import { isMember, response } from "./utils";
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	console.log("Event Context:", context);
@@ -13,26 +12,31 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	if (!event.body) return response(400, { error: "Body is required" });
 
 	const body = JSON.parse(event.body);
-	const message: IMessage = body.message;
-	const query: ICallbackQuery = body.callback_query;
-	const bot = new TelegramBot({ token, message, query });
+	const message: IMessage = body.message || null;
+	const query: ICallbackQuery = body.callback_query || null;
+	const user = message ? message.from : query ? query.from : null;
+	const member = await isMember(user);
+	const bot = new TelegramBot({ token, message, query, member });
 
-	await bot.onWelcome();
-	await bot.onGoodbye();
 	await bot.filter();
+	await bot.onStart();
 
-	await bot.onKey("hi", keys.love, "Hello!");
-	await bot.onKeyRun(
-		"i_love_you",
-		async () => await bot.send("I love you too!")
+	await bot.onKey(
+		"read",
+		async () =>
+			await bot.edit(
+				`Baik.\nApakah anda setuju dengan ketentuan kami?\n[Syarat dan Ketentuan](https://...)\n[Kebijakan Privasi](https://...)`,
+				[[{ text: "Saya Setuju", callback_data: "agree" }]]
+			)
 	);
 
-	await bot.on("/halo", async () => await bot.send("Halo, apa kabar?"));
-	await bot.on("/start", async () => await bot.sendKey(keys.intro));
+	await bot.onKey("agree", async () => {
+		await bot.register();
+		await bot.onStart();
+	});
+	await bot.onKey("ai", async () => await bot.setProgress("ai"));
 
-	await bot.on("/register", async () => await bot.register());
-
-	await bot.onAi(true);
+	await bot.onAi();
 
 	return response(200, { message: "Telegram bot is successfully running" });
 };

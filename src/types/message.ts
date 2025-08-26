@@ -1,7 +1,10 @@
+import { IMember } from "./member";
+
 export interface IInit {
 	token: string;
-	message?: IMessage;
-	query?: ICallbackQuery;
+	message: IMessage | null;
+	query: ICallbackQuery | null;
+	member: IMember | null;
 }
 
 export interface ICallbackQuery {
