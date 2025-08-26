@@ -21,7 +21,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	await bot.onGoodbye();
 	await bot.filter();
 
-	await bot.onKey("hi", keys.love);
+	await bot.onKey("hi", keys.love, "Hello!");
 	await bot.onKeyRun(
 		"i_love_you",
 		async () => await bot.send("I love you too!")

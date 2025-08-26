@@ -79,7 +79,11 @@ export default class TelegramBot {
 	 * @param run The function to execute when the query matches.
 	 * @returns A promise that resolves when the event is handled.
 	 */
-	async onKey(query: string, keyboard: TKeyboards): Promise<void> {
+	async onKey(
+		query: string,
+		keyboard: TKeyboards,
+		text: string
+	): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.message) return;
@@ -88,7 +92,7 @@ export default class TelegramBot {
 
 			console.log(`Listening for query: ${query}`);
 			console.log("Editing keyboard...");
-			await this.editKey(keyboard);
+			await this.editKey(keyboard, text);
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in onQuery method:", error);
@@ -390,19 +394,22 @@ export default class TelegramBot {
 	 * @param keyboard The new inline keyboard to set for the message.
 	 * @returns A promise that resolves when the keyboard is edited.
 	 */
-	async editKey(keyboard: TKeyboards): Promise<void> {
+	async editKey(keyboard: TKeyboards, text: string): Promise<void> {
 		try {
 			if (!this.init.query) throw new Error("Query is not set");
 			if (!this.init.query.message) throw new Error("Message is not set");
-			if (!this.init.query.data) throw new Error("Query data is not set");
+
+			const formattedText = formatText(text);
 
 			const param = new URLSearchParams({
 				chat_id: this.init.query.message.chat.id.toString(),
 				message_id: this.init.query.message.message_id.toString(),
+				text: formattedText,
+				parse_mode: "MarkdownV2",
 				reply_markup: JSON.stringify({ inline_keyboard: keyboard }),
 			});
 
-			const url = `https://api.telegram.org/bot${this.init.token}/editMessageReplyMarkup?`;
+			const url = `https://api.telegram.org/bot${this.init.token}/editMessageText?`;
 			const response = await fetch(url + param.toString());
 
 			if (!response.ok) {
