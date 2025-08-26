@@ -34,62 +34,6 @@ export default class TelegramBot {
 	}
 
 	/**
-	 * Registers a user in the database.
-	 * This method adds a new user to the database if they are not already registered.
-	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
-	 */
-	async register(): Promise<any | null> {
-		try {
-			if (this.init.query) return null;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const user = this.init.message.from;
-
-			const joinedMember: IMember = await getItem("member", { id: user.id });
-			if (joinedMember) {
-				await this.send("Kamu sudah terdaftar sebelumnya.");
-				return null;
-			}
-
-			const newUser: IMember = newMember(user);
-			const success = await insertItem("member", newUser);
-
-			if (success) {
-				await this.send("Masukan email kamu di sini ya!");
-				return newUser;
-			}
-
-			return null;
-		} catch (error) {
-			console.error("Error when registering member:", error);
-			return null;
-		}
-	}
-
-	/**
-	 * Handles swear words detection in messages.
-	 * This method checks the message text for swear words and responds if any are found.
-	 * @returns A promise that resolves when the swear word check is complete.
-	 */
-	async filter(): Promise<void> {
-		try {
-			if (this.isRan) return;
-			if (this.init.query) return;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const text = this.init.message.text;
-			const id = this.init.message.from.id.toString();
-			if (checkSwears(text)) {
-				await this.remove();
-				await this.send("Tolong jaga bahasanya, ya!", id);
-				this.isRan = true;
-			}
-		} catch (error) {
-			console.error("Error in onSwear method:", error);
-		}
-	}
-
-	/**
 	 * Handles a specific text message event.
 	 * This method listens for a specific text message and executes the provided function when the text matches.
 	 * @param text The text to listen for.
@@ -547,6 +491,61 @@ export default class TelegramBot {
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in remove method:", error);
+		}
+	}
+
+	/**
+	 * Registers a user in the database.
+	 * This method adds a new user to the database if they are not already registered.
+	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
+	 */
+	async register(): Promise<any | null> {
+		try {
+			if (this.init.query) return null;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const user = this.init.message.from;
+
+			const joinedMember: IMember = await getItem("member", { id: user.id });
+			if (joinedMember) {
+				await this.send("Kamu sudah terdaftar sebelumnya.");
+				return null;
+			}
+
+			const newUser: IMember = newMember(user);
+			const success = await insertItem("member", newUser);
+
+			if (success) {
+				await this.send("Masukan email kamu di sini ya!");
+				return newUser;
+			}
+
+			return null;
+		} catch (error) {
+			console.error("Error when registering member:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Handles swear words detection in messages.
+	 * This method checks the message text for swear words and responds if any are found.
+	 * @returns A promise that resolves when the swear word check is complete.
+	 */
+	async filter(): Promise<void> {
+		try {
+			if (this.isRan) return;
+			if (this.init.query) return;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const text = this.init.message.text;
+			const id = this.init.message.from.id.toString();
+			if (checkSwears(text)) {
+				await this.remove();
+				await this.send("Tolong jaga bahasanya, ya!", id);
+			}
+		} catch (error) {
+			console.error("Error in onSwear method:", error);
 		}
 	}
 }
