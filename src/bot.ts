@@ -1,9 +1,15 @@
 import { runAi } from "./ai";
-import { getItemByAttribute, insertItem, updateItem } from "./db";
+import { getItem, insertItem, updateItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
-import { EMemberPlan, EStatus, IMember } from "./types/member";
+import { EStatus, IMember } from "./types/member";
 import { IInit } from "./types/message";
-import { checkSwears, formatText } from "./utils";
+import {
+	checkSwears,
+	formatText,
+	isValidEmail,
+	isValidIDPhone,
+	newMember,
+} from "./utils";
 
 /**
  * TelegramBot class provides methods to interact with the Telegram Bot API.
@@ -25,6 +31,35 @@ export default class TelegramBot {
 
 	constructor(init: IInit) {
 		this.init = init;
+	}
+
+	/**
+	 * Registers a user in the database.
+	 * This method adds a new user to the database if they are not already registered.
+	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
+	 */
+	async register(): Promise<any | null> {
+		try {
+			if (this.init.query) return null;
+			if (!this.init.message) throw new Error("Message is not set");
+
+			const user = this.init.message.from;
+
+			const joinedMember: IMember = await getItem("member", { id: user.id });
+			if (joinedMember) return null;
+
+			const newUser: IMember = newMember(user);
+			const success = await insertItem("member", newUser);
+
+			if (success) {
+				return newUser;
+			} else {
+				return null;
+			}
+		} catch (error) {
+			console.error("Error when registering member:", error);
+			return null;
+		}
 	}
 
 	/**
@@ -209,22 +244,16 @@ export default class TelegramBot {
 			if (this.init.query) return;
 			if (!this.init.message) throw new Error("Message is not set");
 
-			const id = this.init.message.from.id.toString();
+			const user = this.init.message.from;
 			const text = this.init.message.text;
 
-			const members = (await getItemByAttribute(
-				"member",
-				"id",
-				Number(id)
-			)) as IMember[];
-			if (members.length === 0) return;
-			const member = members[0];
+			const member: IMember = await getItem("member", { id: user.id });
+			if (!member) return;
 
 			if (member.on_progress === "register") {
 				const status = member.status;
 				if (status === EStatus.EMAIL) {
-					const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-					if (!emailRegex.test(text)) {
+					if (!isValidEmail(text)) {
 						await this.send(
 							"Format email tidak valid. Silahkan coba lagi.\n\nContoh:contoh@mail.com"
 						);
@@ -245,8 +274,7 @@ export default class TelegramBot {
 						);
 					}
 				} else if (status === EStatus.PHONE) {
-					const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-					if (!phoneRegex.test(text)) {
+					if (!isValidIDPhone(text)) {
 						await this.send(
 							"Format nomor telepon tidak valid. Silahkan coba lagi.\n\nContoh:+6281234567890"
 						);
@@ -515,47 +543,6 @@ export default class TelegramBot {
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in remove method:", error);
-		}
-	}
-
-	/**
-	 * Registers a user in the database.
-	 * This method adds a new user to the database if they are not already registered.
-	 * @returns A promise that resolves to the user object if registration is successful, or null if the user is already registered or an error occurs.
-	 */
-	async registerMember(): Promise<any | null> {
-		try {
-			if (this.init.query) return null;
-			if (!this.init.message) throw new Error("Message is not set");
-
-			const member = this.init.message.from;
-			const joinedMember = await getItemByAttribute("member", "id", member.id);
-
-			if (joinedMember.length > 0) return null;
-
-			const newUser: IMember = {
-				id: member.id,
-				username: member.username || "",
-				first_name: member.first_name || "",
-				last_name: member.last_name || "",
-				phone_number: "",
-				email: "",
-				status: EStatus.EMAIL,
-				on_progress: "register",
-				plan: EMemberPlan.FREE,
-				joined_at: Math.floor(Date.now() / 1000),
-				is_active: true,
-			};
-
-			const success = await insertItem("member", newUser);
-			if (success) {
-				return newUser;
-			} else {
-				return null;
-			}
-		} catch (error) {
-			console.error("Error when registering member:", error);
-			return null;
 		}
 	}
 }

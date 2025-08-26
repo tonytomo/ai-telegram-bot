@@ -31,7 +31,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 	await bot.on("/start", async () => await bot.sendKey(keys.intro));
 
 	await bot.on("/register", async () => {
-		const member = await bot.registerMember();
+		const member = await bot.register();
 		if (member) {
 			await bot.send(
 				"Kamu berhasil terdaftar! *Silahkan tulis email kamu disini.*\n\n>Informasi kamu akan kami jaga kerahasiaannya."

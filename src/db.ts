@@ -59,7 +59,7 @@ export async function getItemByIndex(
 	}
 }
 
-export async function getItemByAttribute(
+export async function getItemsByAttribute(
 	tableName: string,
 	attributeName: string,
 	attributeValue: any,
