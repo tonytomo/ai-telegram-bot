@@ -46,16 +46,20 @@ export default class TelegramBot {
 			const user = this.init.message.from;
 
 			const joinedMember: IMember = await getItem("member", { id: user.id });
-			if (joinedMember) return null;
+			if (joinedMember) {
+				await this.send("Kamu sudah terdaftar sebelumnya.");
+				return null;
+			}
 
 			const newUser: IMember = newMember(user);
 			const success = await insertItem("member", newUser);
 
 			if (success) {
+				await this.send("Masukan email kamu di sini ya!");
 				return newUser;
-			} else {
-				return null;
 			}
+
+			return null;
 		} catch (error) {
 			console.error("Error when registering member:", error);
 			return null;
