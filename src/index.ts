@@ -32,8 +32,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
 	await bot.on("/register", async () => await bot.register());
 
-	await bot.onForm();
-
 	await bot.onAi(true);
 
 	return response(200, { message: "Telegram bot is successfully running" });

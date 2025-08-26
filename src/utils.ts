@@ -1,7 +1,7 @@
 import { APIGatewayProxyResultV2 } from "aws-lambda";
 import swearWords from "./constants/swearword.json";
 import { IUser } from "./types/message";
-import { EMemberPlan, EStatus, IMember } from "./types/member";
+import { ELevel, IMember } from "./types/member";
 
 export function replaceText(
 	str: string | undefined,
@@ -63,24 +63,12 @@ export function newMember(member: IUser): IMember {
 	return {
 		id: member.id,
 		username: member.username || "",
-		first_name: member.first_name || "",
-		last_name: member.last_name || "",
-		phone_number: "",
-		email: "",
-		status: EStatus.EMAIL,
-		on_progress: "register",
-		plan: EMemberPlan.FREE,
+		name: `${member.first_name || ""} ${member.last_name || ""}`.trim(),
+		level: ELevel.IRON,
+		score: 0,
+		credits: 1000,
+		on_progress: "starting",
 		joined_at: Math.floor(Date.now() / 1000),
-		is_active: true,
+		is_active: false,
 	};
-}
-
-export function isValidEmail(email: string): boolean {
-	const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	return regex.test(email);
-}
-
-export function isValidIDPhone(idPhone: string): boolean {
-	const regex = /^(\+62|62|0)8[1-9][0-9]{6,9}$/;
-	return regex.test(idPhone);
 }

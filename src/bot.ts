@@ -1,15 +1,9 @@
 import { runAi } from "./ai";
 import { getItem, insertItem, updateItem } from "./db";
 import { TKeyboards } from "./types/keyboard";
-import { EStatus, IMember } from "./types/member";
+import { IMember } from "./types/member";
 import { IInit } from "./types/message";
-import {
-	checkSwears,
-	formatText,
-	isValidEmail,
-	isValidIDPhone,
-	newMember,
-} from "./utils";
+import { checkSwears, formatText, newMember } from "./utils";
 
 /**
  * TelegramBot class provides methods to interact with the Telegram Bot API.
@@ -186,7 +180,7 @@ export default class TelegramBot {
 	 * This method is a placeholder for form-related features and can be extended in the future.
 	 * @returns A promise that resolves when the form functionality is executed.
 	 */
-	async onForm(): Promise<void> {
+	async onForm(form: string, run: () => Promise<void>): Promise<void> {
 		try {
 			if (this.isRan) return;
 			if (this.init.query) return;
@@ -197,55 +191,12 @@ export default class TelegramBot {
 
 			const member: IMember = await getItem("member", { id: user.id });
 			if (!member) return;
+			if (member.on_progress !== form) return;
 
-			if (member.on_progress === "register") {
-				const status = member.status;
-				if (status === EStatus.EMAIL) {
-					if (!isValidEmail(text)) {
-						await this.send(
-							"Format email tidak valid. Silahkan coba lagi.\n\nContoh:contoh@mail.com"
-						);
-					} else {
-						const id = { id: member.id };
-						const expression = "SET #status = :status, #email = :email";
-						const names = {
-							"#status": "status",
-							"#email": "email",
-						};
-						const values = {
-							":status": EStatus.PHONE,
-							":email": text,
-						};
-						await updateItem("member", id, expression, names, values);
-						await this.send(
-							"Terima kasih! Sekarang, silahkan tulis nomor telepon kamu."
-						);
-					}
-				} else if (status === EStatus.PHONE) {
-					if (!isValidIDPhone(text)) {
-						await this.send(
-							"Format nomor telepon tidak valid. Silahkan coba lagi.\n\nContoh:+6281234567890"
-						);
-					} else {
-						const id = { id: member.id };
-						const expression =
-							"SET #status = :status, #phone = :phone, #progress = :progress";
-						const names = {
-							"#status": "status",
-							"#phone": "phone_number",
-							"#progress": "on_progress",
-						};
-						const values = {
-							":status": EStatus.COMPLETED,
-							":phone": text,
-							":progress": "",
-						};
-						await updateItem("member", id, expression, names, values);
-						await this.send("Terima kasih! Pendaftaran kamu sudah lengkap.");
-					}
-				}
-			}
-
+			// Placeholder for form processing logic
+			// e.g., updating member information based on the text input
+			console.log(`Processing form input from ${user.id}: ${text}`);
+			await run();
 			this.isRan = true;
 		} catch (error) {
 			console.error("Error in onForm method:", error);
@@ -546,6 +497,28 @@ export default class TelegramBot {
 			}
 		} catch (error) {
 			console.error("Error in onSwear method:", error);
+		}
+	}
+
+	/**
+	 * Updates the progress status of a member in the database.
+	 * This method updates the 'on_progress' field of a member's record in the database.
+	 * @param progress The new progress status to set for the member.
+	 * @param id The ID of the member whose progress status is to be updated.
+	 * @returns A promise that resolves when the progress status is updated.
+	 */
+	async setProgress(progress: string, id: number): Promise<void> {
+		try {
+			const member: IMember = await getItem("member", { id });
+			if (!member) return;
+
+			const key = { id };
+			const update = "SET #progress = :progress";
+			const names = { "#progress": "on_progress" };
+			const values = { ":progress": progress };
+			await updateItem("member", key, update, names, values);
+		} catch (error) {
+			console.error("Error when setting progress:", error);
 		}
 	}
 }
